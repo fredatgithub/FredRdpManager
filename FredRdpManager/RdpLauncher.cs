@@ -19,13 +19,16 @@ namespace FredRdpManager
       if (string.IsNullOrEmpty(server))
         throw new InvalidOperationException("Le nom du serveur est requis.");
 
+      var port = c.Port > 0 && c.Port <= 65535 ? c.Port : 3389;
+      var address = BuildRdpAddress(server, port);
+
       var user = BuildUserPrincipal(c.Domain, c.UserName);
       if (string.IsNullOrEmpty(user))
         throw new InvalidOperationException("Le nom d'utilisateur est requis.");
 
       var pass = c.Password ?? "";
 
-      var target = "TERMSRV/" + server;
+      var target = "TERMSRV/" + address;
       RunHidden("cmdkey.exe", "/generic:" + QuoteArg(target) + " /user:" + QuoteArg(user) + " /pass:" + QuoteArg(pass));
 
       try
@@ -36,7 +39,7 @@ namespace FredRdpManager
         Process.Start(new ProcessStartInfo
         {
           FileName = mstsc,
-          Arguments = "/v:" + QuoteArg(server),
+          Arguments = "/v:" + QuoteArg(address),
           UseShellExecute = true
         });
       }
@@ -52,6 +55,16 @@ namespace FredRdpManager
         }
         throw;
       }
+    }
+
+    /// <summary>
+    /// Adresse pour mstsc et TERMSRV : « hôte » ou « hôte:port » si le port n’est pas 3389.
+    /// </summary>
+    private static string BuildRdpAddress(string host, int port)
+    {
+      if (port == 3389)
+        return host;
+      return host + ":" + port;
     }
 
     private static string BuildUserPrincipal(string domain, string userName)

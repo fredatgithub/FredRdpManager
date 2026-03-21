@@ -78,10 +78,13 @@ namespace FredRdpManager
         }
       }
 
+      var port = NormalizePort(s.Port);
+
       return new RdpConnection
       {
         Id = id,
         ServerName = s.ServerName ?? "",
+        Port = port,
         Domain = s.Domain ?? "",
         UserName = s.UserName ?? "",
         Password = password ?? ""
@@ -102,10 +105,18 @@ namespace FredRdpManager
       {
         Id = c.Id.ToString("D"),
         ServerName = c.ServerName,
+        Port = NormalizePort(c.Port),
         Domain = c.Domain,
         UserName = c.UserName,
         EncryptedPasswordBase64 = enc
       };
+    }
+
+    private static int NormalizePort(int port)
+    {
+      if (port <= 0 || port > 65535)
+        return 3389;
+      return port;
     }
   }
 }

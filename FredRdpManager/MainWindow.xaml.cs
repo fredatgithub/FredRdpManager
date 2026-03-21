@@ -21,6 +21,11 @@ namespace FredRdpManager
 
     private void MainWindow_OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+      PersistConnections();
+    }
+
+    private void PersistConnections()
+    {
       ConnectionStorage.Save(_connections);
     }
 
@@ -40,7 +45,9 @@ namespace FredRdpManager
 
       var domain = string.IsNullOrWhiteSpace(c.Domain) ? "—" : c.Domain.Trim();
       var user = string.IsNullOrWhiteSpace(c.UserName) ? "—" : c.UserName.Trim();
+      var port = c.Port > 0 ? c.Port : 3389;
       DetailText.Text = "Serveur : " + c.ServerName.Trim() + Environment.NewLine
+                        + "Port RDP : " + port + Environment.NewLine
                         + "Domaine : " + domain + Environment.NewLine
                         + "Utilisateur : " + user;
     }
@@ -53,6 +60,7 @@ namespace FredRdpManager
 
       _connections.Add(dlg.ResultConnection);
       ConnectionsList.SelectedItem = dlg.ResultConnection;
+      PersistConnections();
     }
 
     private void EditButton_OnClick(object sender, RoutedEventArgs e)
@@ -96,6 +104,7 @@ namespace FredRdpManager
 
       _connections.Remove(current);
       UpdateDetail();
+      PersistConnections();
     }
 
     private void ConnectButton_OnClick(object sender, RoutedEventArgs e)

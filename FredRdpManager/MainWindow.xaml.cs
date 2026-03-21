@@ -13,14 +13,22 @@ namespace FredRdpManager
     public MainWindow()
     {
       InitializeComponent();
+      SourceInitialized += MainWindow_OnSourceInitialized;
       _connections = new ObservableCollection<RdpConnection>(ConnectionStorage.Load());
       ConnectionsList.ItemsSource = _connections;
       ConnectionsList.SelectionChanged += ConnectionsList_OnSelectionChanged;
       UpdateDetail();
     }
 
+    private void MainWindow_OnSourceInitialized(object sender, EventArgs e)
+    {
+      SourceInitialized -= MainWindow_OnSourceInitialized;
+      WindowLayoutStorage.TryApply(this);
+    }
+
     private void MainWindow_OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+      WindowLayoutStorage.Save(this);
       PersistConnections();
     }
 

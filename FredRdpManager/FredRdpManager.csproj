@@ -83,6 +83,7 @@
     </Compile>
     <Compile Include="RdpConnection.cs" />
     <Compile Include="RdpLauncher.cs" />
+    <Compile Include="SerializableWindowLayout.cs" />
     <Compile Include="WindowLayoutStorage.cs" />
     <Compile Include="SerializableConnection.cs" />
   </ItemGroup>

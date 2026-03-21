@@ -1,4 +1,4 @@
-# Fred RDP Manager
+# Fred's RDP Manager
 
 Application **WPF** en **C#** ciblant **.NET Framework 4.8** pour centraliser et lancer des connexions **Bureau à distance (RDP)** vers des serveurs Windows.
 

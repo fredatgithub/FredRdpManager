@@ -9,6 +9,7 @@
         Width="720"
         MinHeight="360"
         MinWidth="520"
+        Background="{StaticResource BrushMainWindowBg}"
         Closing="MainWindow_OnClosing">
   <Grid>
     <Grid.ColumnDefinitions>
@@ -17,34 +18,47 @@
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
-    <DockPanel Grid.Column="0" Margin="8">
-      <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="0,0,0,8">
-        <Button x:Name="AddButton" Content="Ajouter…" Margin="0,0,0,4" Click="AddButton_OnClick"/>
-        <Button x:Name="EditButton" Content="Modifier…" Margin="0,0,0,4" Click="EditButton_OnClick"/>
-        <Button x:Name="RemoveButton" Content="Supprimer" Margin="0,0,0,4" Click="RemoveButton_OnClick"/>
-        <Button x:Name="ConnectButton" Content="Se connecter" Click="ConnectButton_OnClick"/>
-      </StackPanel>
-      <ListBox x:Name="ConnectionsList"
-               DisplayMemberPath="DisplayName"
-               MouseDoubleClick="ConnectionsList_OnMouseDoubleClick"/>
-    </DockPanel>
+    <Border Grid.Column="0"
+            Background="{StaticResource BrushSidebarBg}"
+            Padding="8"
+            BorderBrush="#7A9ABE"
+            BorderThickness="0,0,1,0">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="0,0,0,8">
+          <Button x:Name="AddButton" Content="Ajouter…" Margin="0,0,0,4" Click="AddButton_OnClick"/>
+          <Button x:Name="EditButton" Content="Modifier…" Margin="0,0,0,4" Click="EditButton_OnClick"/>
+          <Button x:Name="RemoveButton" Content="Supprimer" Margin="0,0,0,4" Click="RemoveButton_OnClick"/>
+          <Button x:Name="ConnectButton" Content="Se connecter" Click="ConnectButton_OnClick"/>
+        </StackPanel>
+        <ListBox x:Name="ConnectionsList"
+                 DisplayMemberPath="DisplayName"
+                 MouseDoubleClick="ConnectionsList_OnMouseDoubleClick"/>
+      </DockPanel>
+    </Border>
 
     <GridSplitter Grid.Column="1"
                   Width="4"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Stretch"
-                  Background="#DDD"/>
+                  Background="{StaticResource BrushSplitter}"/>
 
-    <DockPanel Grid.Column="2" Margin="16">
-      <TextBlock DockPanel.Dock="Top"
-                 TextWrapping="Wrap"
-                 FontSize="14"
-                 Margin="0,0,0,12"
-                 Text="Sélectionnez une connexion à gauche, puis « Se connecter », ou double-cliquez sur une entrée. Les connexions sont enregistrées dans le répertoire de l’application (connections.xml) après chaque ajout, modification ou suppression, ainsi qu’à la fermeture."/>
-      <TextBlock x:Name="DetailText"
-                 DockPanel.Dock="Top"
-                 TextWrapping="Wrap"
-                 Foreground="#444"/>
-    </DockPanel>
+    <Border Grid.Column="2"
+            Background="{StaticResource BrushDetailBg}"
+            Padding="16"
+            BorderBrush="#B8CFE0"
+            BorderThickness="1,0,0,0">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top"
+                   TextWrapping="Wrap"
+                   FontSize="14"
+                   Margin="0,0,0,12"
+                   Foreground="{StaticResource BrushTextPrimary}"
+                   Text="Sélectionnez une connexion à gauche, puis « Se connecter », ou double-cliquez sur une entrée. Les connexions sont enregistrées dans le répertoire de l’application (connections.xml) après chaque ajout, modification ou suppression, ainsi qu’à la fermeture."/>
+        <TextBlock x:Name="DetailText"
+                   DockPanel.Dock="Top"
+                   TextWrapping="Wrap"
+                   Foreground="{StaticResource BrushTextSecondary}"/>
+      </DockPanel>
+    </Border>
   </Grid>
 </Window>

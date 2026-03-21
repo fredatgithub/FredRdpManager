@@ -44,17 +44,17 @@ namespace FredRdpManager
 
     private void UpdateDetail()
     {
-      var c = ConnectionsList.SelectedItem as RdpConnection;
-      if (c == null)
+      var connectionList = ConnectionsList.SelectedItem as RdpConnection;
+      if (connectionList == null)
       {
-        DetailText.Text = "";
+        DetailText.Text = string.Empty;
         return;
       }
 
-      var domain = string.IsNullOrWhiteSpace(c.Domain) ? "—" : c.Domain.Trim();
-      var user = string.IsNullOrWhiteSpace(c.UserName) ? "—" : c.UserName.Trim();
-      var port = c.Port > 0 ? c.Port : 3389;
-      DetailText.Text = "Serveur : " + c.ServerName.Trim() + Environment.NewLine
+      var domain = string.IsNullOrWhiteSpace(connectionList.Domain) ? "—" : connectionList.Domain.Trim();
+      var user = string.IsNullOrWhiteSpace(connectionList.UserName) ? "—" : connectionList.UserName.Trim();
+      var port = connectionList.Port > 0 ? connectionList.Port : 3389;
+      DetailText.Text = "Serveur : " + connectionList.ServerName.Trim() + Environment.NewLine
                         + "Port RDP : " + port + Environment.NewLine
                         + "Domaine : " + domain + Environment.NewLine
                         + "Utilisateur : " + user;
@@ -62,12 +62,12 @@ namespace FredRdpManager
 
     private void AddButton_OnClick(object sender, RoutedEventArgs e)
     {
-      var dlg = new AddConnectionWindow { Owner = this };
-      if (dlg.ShowDialog() != true || dlg.ResultConnection == null)
+      var dialog = new AddConnectionWindow { Owner = this };
+      if (dialog.ShowDialog() != true || dialog.ResultConnection == null)
         return;
 
-      _connections.Add(dlg.ResultConnection);
-      ConnectionsList.SelectedItem = dlg.ResultConnection;
+      _connections.Add(dialog.ResultConnection);
+      ConnectionsList.SelectedItem = dialog.ResultConnection;
       PersistConnections();
     }
 
@@ -81,15 +81,18 @@ namespace FredRdpManager
         return;
       }
 
-      var dlg = new AddConnectionWindow(current) { Owner = this };
-      if (dlg.ShowDialog() != true || dlg.ResultConnection == null)
+      var dialog = new AddConnectionWindow(current) { Owner = this };
+      if (dialog.ShowDialog() != true || dialog.ResultConnection == null)
         return;
 
       var ix = _connections.IndexOf(current);
       if (ix < 0)
+      {
         return;
-      _connections[ix] = dlg.ResultConnection;
-      ConnectionsList.SelectedItem = dlg.ResultConnection;
+      }
+
+      _connections[ix] = dialog.ResultConnection;
+      ConnectionsList.SelectedItem = dialog.ResultConnection;
     }
 
     private void RemoveButton_OnClick(object sender, RoutedEventArgs e)
@@ -102,13 +105,15 @@ namespace FredRdpManager
         return;
       }
 
-      var r = MessageBox.Show(this,
+      var response = MessageBox.Show(this,
         "Supprimer la connexion « " + current.DisplayName + " » ?",
         "Fred RDP Manager",
         MessageBoxButton.YesNo,
         MessageBoxImage.Question);
-      if (r != MessageBoxResult.Yes)
+      if (response != MessageBoxResult.Yes)
+      {
         return;
+      }
 
       _connections.Remove(current);
       UpdateDetail();
@@ -123,16 +128,21 @@ namespace FredRdpManager
     private void ConnectionsList_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
       if (e.ChangedButton != MouseButton.Left)
+      {
         return;
-      var el = e.OriginalSource as DependencyObject;
-      if (el != null && ItemsControl.ContainerFromElement(ConnectionsList, el) != null)
+      }
+
+      var element = e.OriginalSource as DependencyObject;
+      if (element != null && ItemsControl.ContainerFromElement(ConnectionsList, element) != null)
+      {
         ConnectSelected();
+      }
     }
 
     private void ConnectSelected()
     {
-      var c = ConnectionsList.SelectedItem as RdpConnection;
-      if (c == null)
+      var connectionList = ConnectionsList.SelectedItem as RdpConnection;
+      if (connectionList == null)
       {
         MessageBox.Show(this, "Sélectionnez une connexion.", "Fred RDP Manager",
           MessageBoxButton.OK, MessageBoxImage.Information);
@@ -141,11 +151,11 @@ namespace FredRdpManager
 
       try
       {
-        RdpLauncher.Connect(c);
+        RdpLauncher.Connect(connectionList);
       }
-      catch (Exception ex)
+      catch (Exception exception)
       {
-        MessageBox.Show(this, ex.Message, "Connexion RDP",
+        MessageBox.Show(this, exception.Message, "Connexion RDP",
           MessageBoxButton.OK, MessageBoxImage.Error);
       }
     }

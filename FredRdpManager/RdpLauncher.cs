@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace FredRdpManager
 {
@@ -10,23 +9,29 @@ namespace FredRdpManager
     /// <summary>
     /// Lance mstsc avec les identifiants via cmdkey (TERMSRV).
     /// </summary>
-    public static void Connect(RdpConnection c)
+    public static void Connect(RdpConnection rdpConnection)
     {
-      if (c == null)
-        throw new ArgumentNullException(nameof(c));
+      if (rdpConnection == null)
+      {
+        throw new ArgumentNullException(nameof(rdpConnection));
+      }
 
-      var server = (c.ServerName ?? "").Trim();
+      var server = (rdpConnection.ServerName ?? "").Trim();
       if (string.IsNullOrEmpty(server))
+      {
         throw new InvalidOperationException("Le nom du serveur est requis.");
+      }
 
-      var port = c.Port > 0 && c.Port <= 65535 ? c.Port : 3389;
+      var port = rdpConnection.Port > 0 && rdpConnection.Port <= 65535 ? rdpConnection.Port : 3389;
       var address = BuildRdpAddress(server, port);
 
-      var user = BuildUserPrincipal(c.Domain, c.UserName);
+      var user = BuildUserPrincipal(rdpConnection.Domain, rdpConnection.UserName);
       if (string.IsNullOrEmpty(user))
+      {
         throw new InvalidOperationException("Le nom d'utilisateur est requis.");
+      }
 
-      var pass = c.Password ?? "";
+      var pass = rdpConnection.Password ?? string.Empty;
 
       var target = "TERMSRV/" + address;
       RunHidden("cmdkey.exe", "/generic:" + QuoteArg(target) + " /user:" + QuoteArg(user) + " /pass:" + QuoteArg(pass));
@@ -35,7 +40,10 @@ namespace FredRdpManager
       {
         var mstsc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "mstsc.exe");
         if (!File.Exists(mstsc))
+        {
           mstsc = "mstsc.exe";
+        }
+
         Process.Start(new ProcessStartInfo
         {
           FileName = mstsc,
@@ -63,35 +71,53 @@ namespace FredRdpManager
     private static string BuildRdpAddress(string host, int port)
     {
       if (port == 3389)
+      {
         return host;
+      }
+
       return host + ":" + port;
     }
 
     private static string BuildUserPrincipal(string domain, string userName)
     {
-      var u = (userName ?? "").Trim();
-      if (string.IsNullOrEmpty(u))
+      var user = (userName ?? string.Empty).Trim();
+      if (string.IsNullOrEmpty(user))
+      {
         return null;
-      var d = (domain ?? "").Trim();
-      if (string.IsNullOrEmpty(d))
-        return u;
-      if (u.Contains("\\") || u.Contains("@"))
-        return u;
-      return d + "\\" + u;
+      }
+
+      var theDomain = (domain ?? string.Empty).Trim();
+      if (string.IsNullOrEmpty(theDomain))
+      {
+        return user;
+      }
+
+      if (user.Contains("\\") || user.Contains("@"))
+      {
+        return user;
+      }
+
+      return theDomain + "\\" + user;
     }
 
-    private static string QuoteArg(string s)
+    private static string QuoteArg(string theString)
     {
-      if (string.IsNullOrEmpty(s))
+      if (string.IsNullOrEmpty(theString))
+      {
         return "\"\"";
-      if (s.IndexOfAny(new[] { ' ', '\t' }) < 0)
-        return s;
-      return "\"" + s.Replace("\"", "\\\"") + "\"";
+      }
+
+      if (theString.IndexOfAny(new[] { ' ', '\t' }) < 0)
+      {
+        return theString;
+      }
+
+      return "\"" + theString.Replace("\"", "\\\"") + "\"";
     }
 
     private static void RunHidden(string fileName, string arguments)
     {
-      using (var p = Process.Start(new ProcessStartInfo
+      using (var process = Process.Start(new ProcessStartInfo
       {
         FileName = fileName,
         Arguments = arguments,
@@ -100,10 +126,11 @@ namespace FredRdpManager
         WindowStyle = ProcessWindowStyle.Hidden
       }))
       {
-        p.WaitForExit();
-        if (p.ExitCode != 0)
-          throw new InvalidOperationException(
-            "La commande a échoué : " + fileName + " (code " + p.ExitCode + ").");
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+        {
+          throw new InvalidOperationException("La commande a échoué : " + fileName + " (code " + process.ExitCode + ").");
+        }
       }
     }
   }

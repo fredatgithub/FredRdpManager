@@ -12,14 +12,15 @@ namespace FredRdpManager
   {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("FredRdpManager v1");
 
-    private static string StoragePath =>
-      Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "connections.xml");
+    private static string StoragePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "connections.xml");
 
     public static List<RdpConnection> Load()
     {
       var path = StoragePath;
       if (!File.Exists(path))
+      {
         return new List<RdpConnection>();
+      }
 
       try
       {
@@ -28,7 +29,9 @@ namespace FredRdpManager
           var serializer = new XmlSerializer(typeof(List<SerializableConnection>));
           var list = serializer.Deserialize(stream) as List<SerializableConnection>;
           if (list == null)
+          {
             return new List<RdpConnection>();
+          }
 
           return list.Select(FromSerializable).Where(c => c != null).ToList();
         }
@@ -44,7 +47,9 @@ namespace FredRdpManager
       var path = StoragePath;
       var dir = Path.GetDirectoryName(path);
       if (!string.IsNullOrEmpty(dir))
+      {
         Directory.CreateDirectory(dir);
+      }
 
       var list = connections.Select(ToSerializable).ToList();
       using (var stream = File.Create(path))
@@ -54,21 +59,23 @@ namespace FredRdpManager
       }
     }
 
-    private static RdpConnection FromSerializable(SerializableConnection s)
+    private static RdpConnection FromSerializable(SerializableConnection serializableConnection)
     {
-      if (s == null || string.IsNullOrWhiteSpace(s.ServerName))
+      if (serializableConnection == null || string.IsNullOrWhiteSpace(serializableConnection.ServerName))
         return null;
 
-      Guid id;
-      if (string.IsNullOrWhiteSpace(s.Id) || !Guid.TryParse(s.Id, out id))
-        id = Guid.NewGuid();
+      Guid guid;
+      if (string.IsNullOrWhiteSpace(serializableConnection.Id) || !Guid.TryParse(serializableConnection.Id, out guid))
+      {
+        guid = Guid.NewGuid();
+      }
 
       string password = null;
-      if (!string.IsNullOrEmpty(s.EncryptedPasswordBase64))
+      if (!string.IsNullOrEmpty(serializableConnection.EncryptedPasswordBase64))
       {
         try
         {
-          var encrypted = Convert.FromBase64String(s.EncryptedPasswordBase64);
+          var encrypted = Convert.FromBase64String(serializableConnection.EncryptedPasswordBase64);
           var decrypted = ProtectedData.Unprotect(encrypted, Entropy, DataProtectionScope.CurrentUser);
           password = Encoding.UTF8.GetString(decrypted);
         }
@@ -78,44 +85,47 @@ namespace FredRdpManager
         }
       }
 
-      var port = NormalizePort(s.Port);
+      var port = NormalizePort(serializableConnection.Port);
 
       return new RdpConnection
       {
-        Id = id,
-        ServerName = s.ServerName ?? "",
+        Id = guid,
+        ServerName = serializableConnection.ServerName ?? string.Empty,
         Port = port,
-        Domain = s.Domain ?? "",
-        UserName = s.UserName ?? "",
-        Password = password ?? ""
+        Domain = serializableConnection.Domain ?? string.Empty,
+        UserName = serializableConnection.UserName ?? string.Empty,
+        Password = password ?? string.Empty
       };
     }
 
-    private static SerializableConnection ToSerializable(RdpConnection c)
+    private static SerializableConnection ToSerializable(RdpConnection rdpConnection)
     {
-      string enc = null;
-      if (!string.IsNullOrEmpty(c.Password))
+      string encoded = null;
+      if (!string.IsNullOrEmpty(rdpConnection.Password))
       {
-        var plain = Encoding.UTF8.GetBytes(c.Password);
+        var plain = Encoding.UTF8.GetBytes(rdpConnection.Password);
         var protectedBytes = ProtectedData.Protect(plain, Entropy, DataProtectionScope.CurrentUser);
-        enc = Convert.ToBase64String(protectedBytes);
+        encoded = Convert.ToBase64String(protectedBytes);
       }
 
       return new SerializableConnection
       {
-        Id = c.Id.ToString("D"),
-        ServerName = c.ServerName,
-        Port = NormalizePort(c.Port),
-        Domain = c.Domain,
-        UserName = c.UserName,
-        EncryptedPasswordBase64 = enc
+        Id = rdpConnection.Id.ToString("D"),
+        ServerName = rdpConnection.ServerName,
+        Port = NormalizePort(rdpConnection.Port),
+        Domain = rdpConnection.Domain,
+        UserName = rdpConnection.UserName,
+        EncryptedPasswordBase64 = encoded
       };
     }
 
     private static int NormalizePort(int port)
     {
       if (port <= 0 || port > 65535)
+      {
         return 3389;
+      }
+
       return port;
     }
   }

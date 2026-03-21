@@ -20,10 +20,16 @@ namespace FredRdpManager
       get
       {
         if (string.IsNullOrWhiteSpace(ServerName))
+        {
           return "(sans nom)";
+        }
+
         var host = ServerName.Trim();
         if (Port > 0 && Port != 3389)
+        {
           return host + " : " + Port;
+        }
+
         return host;
       }
     }

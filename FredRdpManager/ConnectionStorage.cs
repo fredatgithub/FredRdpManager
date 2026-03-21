@@ -13,10 +13,7 @@ namespace FredRdpManager
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("FredRdpManager v1");
 
     private static string StoragePath =>
-      Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "FredRdpManager",
-        "connections.xml");
+      Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "connections.xml");
 
     public static List<RdpConnection> Load()
     {

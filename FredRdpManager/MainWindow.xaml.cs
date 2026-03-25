@@ -9,6 +9,7 @@ namespace FredRdpManager
   public partial class MainWindow : Window
   {
     private readonly ObservableCollection<RdpConnection> _connections;
+    private RdpWinFormsClient _rdpClient;
 
     public MainWindow()
     {
@@ -28,6 +29,16 @@ namespace FredRdpManager
 
     private void MainWindow_OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+      try
+      {
+        if (_rdpClient != null)
+          _rdpClient.Disconnect();
+      }
+      catch
+      {
+        // ignore
+      }
+
       WindowLayoutStorage.Save(this);
       PersistConnections();
     }
@@ -151,13 +162,23 @@ namespace FredRdpManager
 
       try
       {
-        RdpLauncher.Connect(connectionList);
+        EnsureRdpHostCreated();
+        _rdpClient.Connect(connectionList);
       }
       catch (Exception exception)
       {
         MessageBox.Show(this, exception.Message, "Connexion RDP",
           MessageBoxButton.OK, MessageBoxImage.Error);
       }
+    }
+
+    private void EnsureRdpHostCreated()
+    {
+      if (_rdpClient != null)
+        return;
+
+      _rdpClient = new RdpWinFormsClient();
+      RdpHost.Child = _rdpClient;
     }
   }
 }

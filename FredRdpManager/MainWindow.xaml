@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         mc:Ignorable="d"
-        Title="Fred's RDP Manager"
+        Title="Fred RDP Manager"
         Height="480"
         Width="720"
         MinHeight="360"
@@ -47,7 +48,7 @@
             Padding="16"
             BorderBrush="#B8CFE0"
             BorderThickness="1,0,0,0">
-      <DockPanel>
+      <DockPanel LastChildFill="True">
         <TextBlock DockPanel.Dock="Top"
                    TextWrapping="Wrap"
                    FontSize="14"
@@ -57,7 +58,16 @@
         <TextBlock x:Name="DetailText"
                    DockPanel.Dock="Top"
                    TextWrapping="Wrap"
-                   Foreground="{StaticResource BrushTextSecondary}"/>
+                   Foreground="{StaticResource BrushTextSecondary}"
+                   Margin="0,0,0,12"/>
+
+        <Border Background="#F2F8FE"
+                BorderBrush="#9BB5D1"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="8">
+          <wfi:WindowsFormsHost x:Name="RdpHost" />
+        </Border>
       </DockPanel>
     </Border>
   </Grid>

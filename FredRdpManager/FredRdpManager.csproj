@@ -89,13 +89,17 @@
       <DependentUpon>AddConnectionWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="AppLogger.cs" />
     <Compile Include="ConnectionStorage.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ConnectionViewModel.cs" />
     <Compile Include="RdpConnection.cs" />
-    <Compile Include="RdpWinFormsClient.cs" />
+    <Compile Include="RdpWinFormsClient.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="RdpLauncher.cs" />
     <Compile Include="SerializableWindowLayout.cs" />
     <Compile Include="WindowLayoutStorage.cs" />

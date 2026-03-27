@@ -75,29 +75,77 @@
 
     <Border Grid.Column="2"
             Background="{StaticResource BrushDetailBg}"
-            Padding="16"
+            Padding="12,12,12,0"
             BorderBrush="#B8CFE0"
             BorderThickness="1,0,0,0">
       <DockPanel LastChildFill="True">
         <TextBlock DockPanel.Dock="Top"
                    TextWrapping="Wrap"
                    FontSize="14"
-                   Margin="0,0,0,12"
+                   Margin="0,0,0,8"
                    Foreground="{StaticResource BrushTextPrimary}"
-                   Text="Sélectionnez une connexion à gauche, puis double-cliquez ou cliquez « Se connecter » pour ouvrir une session RDP."/>
+                   Text="Sélectionnez une connexion à gauche, puis double-cliquez pour ouvrir une session RDP."/>
         <TextBlock x:Name="DetailText"
                    DockPanel.Dock="Top"
                    TextWrapping="Wrap"
                    Foreground="{StaticResource BrushTextSecondary}"
-                   Margin="0,0,0,12"/>
+                   Margin="0,0,0,8"/>
 
-        <Border Background="#F2F8FE"
-                BorderBrush="#9BB5D1"
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="8">
-          <wfi:WindowsFormsHost x:Name="RdpHost" />
-        </Border>
+        <!-- Zone principale multi-sessions -->
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Barre d'onglets -->
+            <RowDefinition Height="*"/>    <!-- Contenu RDP -->
+          </Grid.RowDefinitions>
+
+          <!-- Système d'onglets (Barre uniquement) -->
+          <TabControl x:Name="SessionsTabControl"
+                      Grid.Row="0"
+                      Background="Transparent"
+                      BorderThickness="0,0,0,1"
+                      BorderBrush="#9BB5D1"
+                      Padding="0"
+                      SelectionChanged="SessionsTabControl_OnSelectionChanged">
+            <TabControl.ItemTemplate>
+              <DataTemplate DataType="{x:Type local:RdpWinFormsClient}">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" Margin="4,2,6,2"/>
+                  <Button Content="×" 
+                          Width="14" Height="14" 
+                          FontSize="10" Padding="0,0,0,1"
+                          VerticalAlignment="Center"
+                          Background="Transparent" BorderThickness="0"
+                          Tag="{Binding}"
+                          Click="CloseTabButton_OnClick">
+                    <Button.Style>
+                      <Style TargetType="Button">
+                        <Setter Property="Foreground" Value="#999"/>
+                        <Style.Triggers>
+                          <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="Red"/>
+                            <Setter Property="Background" Value="#FFE0E0"/>
+                          </Trigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Button.Style>
+                  </Button>
+                </StackPanel>
+              </DataTemplate>
+            </TabControl.ItemTemplate>
+            <!-- ContentTemplate vide : l'affichage réel est déporté dans ActiveRdpHost pour la performance -->
+            <TabControl.ContentTemplate>
+              <DataTemplate><Grid/></DataTemplate>
+            </TabControl.ContentTemplate>
+          </TabControl>
+
+          <!-- Hôte WinForms unique utilisé pour l'onglet actif -->
+          <Border x:Name="RdpContainer" 
+                  Grid.Row="1"
+                  Background="#F2F8FE"
+                  Visibility="Collapsed">
+            <wfi:WindowsFormsHost x:Name="ActiveRdpHost" />
+          </Border>
+        </Grid>
       </DockPanel>
     </Border>
   </Grid>

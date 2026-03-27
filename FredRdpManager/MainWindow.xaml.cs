@@ -13,12 +13,13 @@ namespace FredRdpManager
     // Un ViewModel par connexion enregistrée
     private readonly ObservableCollection<ConnectionViewModel> _viewModels;
 
-    // Clients RDP actifs, indexés par l'Id de la connexion
+    // Clients RDP actifs, liés au TabControl
+    private readonly ObservableCollection<RdpWinFormsClient> _activeSessionsCollection =
+        new ObservableCollection<RdpWinFormsClient>();
+
+    // Dictionnaire pour recherche rapide par Id
     private readonly Dictionary<Guid, RdpWinFormsClient> _activeClients =
         new Dictionary<Guid, RdpWinFormsClient>();
-
-    // Id de la connexion actuellement affichée dans RdpHost
-    private Guid _currentConnectionId = Guid.Empty;
 
     public MainWindow()
     {
@@ -35,6 +36,9 @@ namespace FredRdpManager
 
       ConnectionsList.ItemsSource = _viewModels;
       ConnectionsList.SelectionChanged += ConnectionsList_OnSelectionChanged;
+      
+      SessionsTabControl.ItemsSource = _activeSessionsCollection;
+      
       UpdateDetail();
     }
 
@@ -48,10 +52,9 @@ namespace FredRdpManager
 
     private void MainWindow_OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-      AppLogger.Log($"=== Fermeture — {_activeClients.Count} client(s) actif(s) à déconnecter ===");
+      AppLogger.Log($"=== Fermeture — {_activeSessionsCollection.Count} client(s) actif(s) à déconnecter ===");
 
-      // Déconnecter tous les clients actifs
-      foreach (var client in _activeClients.Values)
+      foreach (var client in _activeSessionsCollection)
       {
         try { client.Disconnect(); }
         catch (Exception ex) { AppLogger.LogError("Erreur lors de la déconnexion à la fermeture.", ex); }
@@ -69,12 +72,57 @@ namespace FredRdpManager
       ConnectionStorage.Save(_viewModels.Select(vm => vm.Connection));
     }
 
+    // ── Gestion des Onglets ─────────────────────────────────────────────────
+
+    private void SessionsTabControl_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (SessionsTabControl.SelectedItem is RdpWinFormsClient client)
+      {
+         ShowClient(client);
+         
+         // Synchroniser la liste de gauche
+         var vm = _viewModels.FirstOrDefault(x => x.Connection.Id == client.ConnectionId);
+         if (vm != null && ConnectionsList.SelectedItem != vm)
+         {
+             ConnectionsList.SelectedItem = vm;
+         }
+      }
+      else
+      {
+         RdpContainer.Visibility = Visibility.Collapsed;
+         ActiveRdpHost.Child = null;
+      }
+    }
+
+    private void CloseTabButton_OnClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button btn && btn.Tag is RdpWinFormsClient client)
+      {
+         AppLogger.Log($"[UI] Fermeture onglet — Id={client.ConnectionId}");
+         client.Disconnect();
+         _activeSessionsCollection.Remove(client);
+         _activeClients.Remove(client.ConnectionId);
+         
+         var vm = _viewModels.FirstOrDefault(x => x.Connection.Id == client.ConnectionId);
+         if (vm != null) vm.IsConnected = false;
+      }
+    }
+
     // ── Sélection dans la liste ─────────────────────────────────────────────
 
     private void ConnectionsList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      // Simple clic : met à jour les détails textuels uniquement (pas de connexion automatique)
       UpdateDetail();
+      
+      // Si la connexion sélectionnée est déjà active, basculer sur l'onglet
+      if (ConnectionsList.SelectedItem is ConnectionViewModel vm)
+      {
+          var active = _activeSessionsCollection.FirstOrDefault(x => x.ConnectionId == vm.Connection.Id);
+          if (active != null && SessionsTabControl.SelectedItem != active)
+          {
+              SessionsTabControl.SelectedItem = active;
+          }
+      }
     }
 
     private void UpdateDetail()
@@ -116,14 +164,12 @@ namespace FredRdpManager
 
       if (_activeClients.TryGetValue(id, out var existingClient))
       {
-        // Connexion déjà ouverte → afficher dans le panneau de droite
-        AppLogger.Log($"[UI] Double-clic sur '{vm.DisplayName}' — session déjà active, bascule affichage.");
-        ShowClient(existingClient);
+        AppLogger.Log($"[UI] Double-clic sur '{vm.DisplayName}' — session déjà active, bascule onglet.");
+        SessionsTabControl.SelectedItem = _activeSessionsCollection.FirstOrDefault(x => x.ConnectionId == id);
       }
       else
       {
-        // Nouvelle connexion → créer et connecter
-        AppLogger.Log($"[UI] Double-clic sur '{vm.DisplayName}' — lancement d'une nouvelle session.");
+        AppLogger.Log($"[UI] Double-clic sur '{vm.DisplayName}' — lancement nouvelle session.");
         LaunchConnection(vm);
       }
     }
@@ -145,25 +191,16 @@ namespace FredRdpManager
     private void EditButton_OnClick(object sender, RoutedEventArgs e)
     {
       var vm = ConnectionsList.SelectedItem as ConnectionViewModel;
-      if (vm == null)
-      {
-        MessageBox.Show(this, "Sélectionnez une connexion à modifier.", "Fred RDP Manager",
-            MessageBoxButton.OK, MessageBoxImage.Information);
-        return;
-      }
+      if (vm == null) return;
 
       var dialog = new AddConnectionWindow(vm.Connection) { Owner = this };
       if (dialog.ShowDialog() != true || dialog.ResultConnection == null)
         return;
 
       var ix = _viewModels.IndexOf(vm);
-      if (ix < 0)
-        return;
+      if (ix < 0) return;
 
-      var updated = new ConnectionViewModel(dialog.ResultConnection)
-      {
-        IsConnected = vm.IsConnected   // conserver l'état visuel si le client tourne encore
-      };
+      var updated = new ConnectionViewModel(dialog.ResultConnection) { IsConnected = vm.IsConnected };
       _viewModels[ix] = updated;
       ConnectionsList.SelectedItem = updated;
     }
@@ -171,32 +208,16 @@ namespace FredRdpManager
     private void RemoveButton_OnClick(object sender, RoutedEventArgs e)
     {
       var vm = ConnectionsList.SelectedItem as ConnectionViewModel;
-      if (vm == null)
-      {
-        MessageBox.Show(this, "Sélectionnez une connexion à supprimer.", "Fred RDP Manager",
-            MessageBoxButton.OK, MessageBoxImage.Information);
-        return;
-      }
+      if (vm == null) return;
 
-      var response = MessageBox.Show(this,
-          "Supprimer la connexion « " + vm.DisplayName + " » ?",
-          "Fred RDP Manager",
-          MessageBoxButton.YesNo,
-          MessageBoxImage.Question);
-      if (response != MessageBoxResult.Yes)
-        return;
+      var response = MessageBox.Show(this, "Supprimer la connexion « " + vm.DisplayName + " » ?", "Fred RDP Manager", MessageBoxButton.YesNo, MessageBoxImage.Question);
+      if (response != MessageBoxResult.Yes) return;
 
-      // Déconnecter si actif
       if (_activeClients.TryGetValue(vm.Connection.Id, out var client))
       {
-        try { client.Disconnect(); }
-        catch { /* ignore */ }
+        client.Disconnect();
+        _activeSessionsCollection.Remove(client);
         _activeClients.Remove(vm.Connection.Id);
-        if (_currentConnectionId == vm.Connection.Id)
-        {
-          RdpHost.Child = null;
-          _currentConnectionId = Guid.Empty;
-        }
       }
 
       _viewModels.Remove(vm);
@@ -207,17 +228,10 @@ namespace FredRdpManager
     private void ConnectButton_OnClick(object sender, RoutedEventArgs e)
     {
       var vm = ConnectionsList.SelectedItem as ConnectionViewModel;
+      if (vm == null) return;
 
-      if (vm == null)
-      {
-        MessageBox.Show(this, "Sélectionnez une connexion.", "Fred RDP Manager",
-            MessageBoxButton.OK, MessageBoxImage.Information);
-        return;
-      }
-
-      // Si déjà connecté, juste afficher ; sinon créer une nouvelle session
       if (_activeClients.TryGetValue(vm.Connection.Id, out var existing))
-        ShowClient(existing);
+        SessionsTabControl.SelectedItem = _activeSessionsCollection.FirstOrDefault(x => x.ConnectionId == vm.Connection.Id);
       else
         LaunchConnection(vm);
     }
@@ -226,54 +240,48 @@ namespace FredRdpManager
 
     private void LaunchConnection(ConnectionViewModel vm)
     {
-      AppLogger.Log($"[UI] LaunchConnection — '{vm.DisplayName}'  Id={vm.Connection.Id}");
+      AppLogger.Log($"[UI] LaunchConnection — '{vm.DisplayName}'");
 
       try
       {
-        var client = new RdpWinFormsClient { ConnectionId = vm.Connection.Id };
+        var client = new RdpWinFormsClient { 
+            ConnectionId = vm.Connection.Id,
+            DisplayName = vm.DisplayName 
+        };
 
         client.ConnectedChanged += (s, ev) =>
         {
-          // Toujours sur le thread UI (événement ActiveX)
-          var wasConnected = vm.IsConnected;
           vm.IsConnected = client.IsConnected;
-
-          AppLogger.Log($"[UI] ConnectedChanged — '{vm.DisplayName}'  IsConnected={client.IsConnected}  (était={wasConnected})");
-
           if (!client.IsConnected)
           {
-            _activeClients.Remove(client.ConnectionId);
-            AppLogger.Log($"[UI] Client retiré du dictionnaire — Id={client.ConnectionId}");
-
-            // Si c'était la fenêtre affichée, on vide le panneau
-            if (_currentConnectionId == client.ConnectionId)
-            {
-              RdpHost.Child = null;
-              _currentConnectionId = Guid.Empty;
-            }
+             // On ne ferme pas l'onglet automatiquement pour permettre à l'utilisateur de lire l'erreur si besoin
+             // Mais on pourrait le faire ici si souhaité
           }
         };
 
         _activeClients[vm.Connection.Id] = client;
-        AppLogger.Log($"[UI] Client ajouté au dictionnaire — Id={vm.Connection.Id}  total actifs={_activeClients.Count}");
-
+        _activeSessionsCollection.Add(client);
+        
+        SessionsTabControl.SelectedItem = client; 
         client.Connect(vm.Connection);
-        ShowClient(client);
-        AppLogger.Log($"[UI] ShowClient() appelé — connexion async démarrée.");
       }
       catch (Exception ex)
       {
         AppLogger.LogError($"[UI] Exception dans LaunchConnection pour '{vm.DisplayName}'.", ex);
-        MessageBox.Show(this, ex.Message, "Connexion RDP",
-            MessageBoxButton.OK, MessageBoxImage.Error);
+        MessageBox.Show(this, ex.Message, "Connexion RDP", MessageBoxButton.OK, MessageBoxImage.Error);
       }
     }
 
     private void ShowClient(RdpWinFormsClient client)
     {
-      AppLogger.Log($"[UI] ShowClient — Id={client.ConnectionId}  (précédent={_currentConnectionId})");
-      _currentConnectionId = client.ConnectionId;
-      RdpHost.Child = client;
+      AppLogger.Log($"[UI] ShowClient — Id={client.ConnectionId}");
+      RdpContainer.Visibility = Visibility.Visible;
+      
+      // Pour éviter les clignotements, on ne réassigne que si nécessaire
+      if (ActiveRdpHost.Child != client)
+      {
+          ActiveRdpHost.Child = client;
+      }
     }
   }
 }
